@@ -1,4 +1,4 @@
-# main.tf
+# groups.tf
 
 module "iam" {
   source = "./modules/iam"

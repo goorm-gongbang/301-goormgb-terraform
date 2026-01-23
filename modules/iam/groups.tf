@@ -1,4 +1,4 @@
-#iam/main.tf
+#iam/groups.tf
 terraform {
   required_providers {
     aws = {
