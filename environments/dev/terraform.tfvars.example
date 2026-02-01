@@ -1,0 +1,5 @@
+# environments/dev/terraform.tfvars.example
+# 이 파일을 terraform.tfvars로 복사하고 값을 설정하세요
+
+# 미니PC Public IP
+dev_minipc_ip = "your-minipc-public-ip"
