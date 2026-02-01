@@ -1,115 +1,152 @@
 # GoormGB Terraform Infrastructure
 
-GoormGB 티켓팅 플랫폼을 위한 AWS 인프라 코드입니다.
+티켓팅 플랫폼 GoormGB의 AWS 인프라를 관리하는 Terraform 프로젝트입니다.
 
 ## 프로젝트 개요
 
-- **서비스**: 티켓팅 플랫폼 (추천시스템 + AI 봇 방어)
-- **도메인**: goormgb.space
-- **클라우드**: AWS (ap-northeast-2)
-- **예상 동시접속**: 100만 (티켓 오픈 시)
+| 항목      | 내용                             |
+| --------- | -------------------------------- |
+| 도메인    | goormgb.space                    |
+| Prod 환경 | AWS (EKS, ECS, RDS, ElastiCache) |
+| Dev 환경  | 미니PC (k3s)                     |
+| 예상 비용 | ~$790/월 (Prod만)                |
 
-## 디렉토리 구조
+## 아키텍처
+
+```
+[Dev - 미니PC k3s]                    [Prod - AWS]
+┌─────────────────┐                  ┌─────────────────────────────┐
+│ Frontend        │                  │ Route53 → CloudFront → S3  │
+│ Backend (5 MSA) │                  │           ↓                │
+│ AI (2 서비스)   │                  │ ALB → EKS (Backend)        │
+│ PostgreSQL      │                  │     → ECS (AI)             │
+│ Redis           │                  │           ↓                │
+│                 │                  │ RDS + ElastiCache          │
+│ 비용: $0        │                  │ 비용: ~$790/월             │
+└─────────────────┘                  └─────────────────────────────┘
+        │                                       │
+        └───────────── MongoDB Atlas ───────────┘
+                      (Free, 공유)
+```
+
+## 프로젝트 구조
 
 ```
 301-goormgb-terraform/
-├── docs/                        # 문서
-│   ├── README.md                # 이 파일
-│   ├── ARCHITECTURE.md          # 아키텍처 다이어그램
-│   ├── COST.md                  # 비용 예측
-│   ├── RUNBOOK.md               # 운영 가이드
-│   └── decisions/               # ADR (Architecture Decision Records)
+├── modules/                    # Terraform 모듈
+│   ├── vpc/                    # VPC, Subnet, NAT Instance
+│   ├── eks/                    # EKS Cluster, Karpenter
+│   ├── ecs/                    # ECS Fargate (AI)
+│   ├── rds/                    # RDS PostgreSQL
+│   ├── elasticache/            # ElastiCache Redis
+│   ├── s3/                     # S3 Buckets (7개)
+│   ├── cloudfront/             # CloudFront Distributions
+│   ├── route53/                # DNS
+│   ├── acm/                    # SSL 인증서
+│   ├── ecr/                    # Container Registry
+│   ├── iam/                    # IAM Roles & Policies
+│   ├── secrets/                # Secrets Manager
+│   └── lambda-mongodb-backup/  # MongoDB 백업 Lambda
 │
-├── environments/                # 환경별 설정
-│   ├── shared/                  # 공통 리소스 (ECR, IAM)
-│   ├── dev/                     # dev 환경 (Route53만)
-│   ├── prod/                    # prod 환경 (전체 인프라)
-│   └── ai/                      # AI 전용 (dev/prod 선택)
+├── environments/               # 환경별 설정
+│   ├── shared/                 # 공유 리소스 (ECR, Route53)
+│   ├── prod/                   # Prod 환경
+│   └── ai/                     # AI 환경 (Prod ECS)
 │
-└── modules/                     # 재사용 가능한 모듈
-    ├── vpc/                     # VPC, Subnets, NAT Instance
-    ├── ecr/                     # Container Registry
-    ├── eks/                     # EKS Cluster (100% Spot)
-    ├── ecs/                     # ECS Fargate (AI 서비스)
-    ├── rds/                     # PostgreSQL + pgvector
-    ├── elasticache/             # Redis Cluster
-    ├── s3/                      # S3 Buckets
-    ├── cloudfront/              # CDN Distributions
-    ├── route53/                 # DNS
-    ├── acm/                     # SSL 인증서
-    ├── secrets/                 # Secrets Manager
-    └── iam/                     # IAM Groups, Users
+├── scripts/                    # 운영 스크립트
+│   ├── mongodb-backup/         # MongoDB → S3 백업
+│   ├── s3-restore/             # S3 → MongoDB 복원
+│   ├── sql/                    # SQL 스키마
+│   ├── migrate-policies.sh     # Dev → Prod 마이그레이션
+│   └── README.md
+│
+└── docs/                       # 문서
+    ├── ARCHITECTURE.md         # 아키텍처 상세
+    ├── COST.md                 # 비용 분석
+    ├── RUNBOOK.md              # 운영 가이드
+    ├── MONGODB_ATLAS.md        # MongoDB 설정
+    ├── LAMBDA_BACKUP.md        # Lambda 백업 가이드
+    ├── S3_DATA_REUSE.md        # S3 데이터 재사용
+    └── DATA_MIGRATION.md       # 데이터 마이그레이션
 ```
 
-## 환경 구성
+## 빠른 시작
 
-| 환경       | 설명        | 인프라                               |
-| ---------- | ----------- | ------------------------------------ |
-| **shared** | 공통 리소스 | ECR (8개), IAM                       |
-| **dev**    | 개발 환경   | Route53 레코드 (미니PC k3s)          |
-| **prod**   | 운영 환경   | VPC, EKS, RDS, Redis, S3, CloudFront |
-| **ai**     | AI 서비스   | ECS Fargate Spot (dev/prod 선택)     |
-
-## 적용 순서
+### 1. 사전 요구사항
 
 ```bash
-# 1. 공통 리소스 (최초 1회)
+# Terraform 설치
+brew install terraform
+
+# AWS CLI 설정
+aws configure
+```
+
+### 2. 공유 리소스 배포 (최초 1회)
+
+```bash
 cd environments/shared
 terraform init
 terraform apply
+```
 
-# 2. dev 환경
-cd environments/dev
-terraform init
-terraform apply
+### 3. Prod 환경 배포
 
-# 3. prod 환경
+```bash
 cd environments/prod
 terraform init
 terraform apply
-
-# 4. AI 환경 (dev)
-cd environments/ai
-terraform init
-terraform apply -var="environment=dev"
-
-# 5. AI 환경 (prod)
-terraform apply -var="environment=prod"
 ```
 
-## 기술 스택
+## 주요 기능
 
-### Backend
+### 비용 최적화 (39% 절감)
 
-- Java 21, Spring Boot 4.0.2
-- PostgreSQL (RDS), Redis (ElastiCache)
+| 최적화                     | 절감액  |
+| -------------------------- | ------- |
+| NAT Gateway → NAT Instance | $74/월  |
+| EKS 100% Spot              | $170/월 |
+| ECS Fargate Spot           | $48/월  |
+| Dev 미니PC 활용            | $75/월  |
+| MongoDB Atlas Free         | $57/월  |
 
-### Frontend
+### AI 데이터 파이프라인
 
-- TypeScript, Next.js 16
-- Tailwind CSS, Shadcn UI
+```
+[사용자 궤적/VQA] → [MongoDB Atlas] → [Lambda 백업] → [S3 Glacier]
+                         │                              │
+                         └─── TTL 7일 ────→ 자동 삭제 ──┘
+                                            (백업 후)
+```
 
-### AI
+### 스케일링 전략
 
-- Python 3.12, FastAPI, LangGraph
-- 외부 LLM API (OpenRouter/OpenAI)
+- **EKS**: Karpenter + 100% Spot (티켓 오픈 시 자동 확장)
+- **ECS**: Fargate Spot × 2 (AZ 분산)
+- **Redis**: 3 Shards (티켓 대기열 처리)
 
-### Infrastructure
+## 문서
 
-- EKS (100% Spot + Karpenter)
-- ECS Fargate Spot (AI)
-- Istio Service Mesh
-- OTel + Prometheus + Loki + Grafana
+| 문서                                        | 설명                |
+| ------------------------------------------- | ------------------- |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)     | 전체 아키텍처       |
+| [COST.md](docs/COST.md)                     | 비용 분석 및 최적화 |
+| [RUNBOOK.md](docs/RUNBOOK.md)               | 운영 가이드         |
+| [MONGODB_ATLAS.md](docs/MONGODB_ATLAS.md)   | MongoDB 설정        |
+| [S3_DATA_REUSE.md](docs/S3_DATA_REUSE.md)   | S3 데이터 재사용    |
+| [DATA_MIGRATION.md](docs/DATA_MIGRATION.md) | 데이터 마이그레이션 |
 
-## 비용 최적화
+## 환경별 비용
 
-- **100% Spot Instance**: EKS 노드, ECS Fargate
-- **NAT Instance**: NAT Gateway 대비 ~$32/월 절감
-- **S3 수명주기**: 30일 → IA → Glacier
-- **ECR 수명주기**: 오래된 이미지 자동 삭제
+| 환경              | 기간      | 월 비용 | 총 비용   |
+| ----------------- | --------- | ------- | --------- |
+| **Prod**          | 4주 (1달) | ~$790   | ~$790     |
+| **Dev (미니PC)**  | 2달       | $0      | $0        |
+| **MongoDB Atlas** | 3개월     | $0      | $0        |
+| **총계**          |           |         | **~$790** |
 
-## 관련 문서
+## 관련 링크
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - 상세 아키텍처
-- [COST.md](./COST.md) - 비용 예측
-- [RUNBOOK.md](./RUNBOOK.md) - 운영 가이드
+- MongoDB Atlas: https://cloud.mongodb.com
+- AWS Console: https://console.aws.amazon.com
+- Terraform Registry: https://registry.terraform.io
