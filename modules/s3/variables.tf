@@ -15,3 +15,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "cors_allowed_origins" {
+  description = "Allowed origins for CORS (VQA images bucket)"
+  type        = list(string)
+  default     = ["*"]
+}

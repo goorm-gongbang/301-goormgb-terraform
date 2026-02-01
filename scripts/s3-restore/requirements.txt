@@ -1,0 +1,3 @@
+# scripts/s3-restore/requirements.txt
+boto3>=1.34.0
+pymongo>=4.6.0

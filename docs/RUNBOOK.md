@@ -329,37 +329,187 @@ kubectl run -it --rm redis-test --image=redis:7 \
 
 ## 티켓 오픈 대비
 
-### T-24시간
+### 스케일업 자동화 (CronJob)
+
+**왜 필요한가?**
+- 100% Spot 환경에서 Karpenter 노드 프로비저닝에 30초-2분 소요
+- 티켓 오픈 시 갑작스러운 트래픽 급증 → 이 시간 동안 서비스 지연
+- 해결: 오픈 전에 미리 노드를 확보
+
+> ⚠️ 아래 Kubernetes 매니페스트는 Terraform이 아닌 kubectl로 직접 적용해야 합니다.
+
+#### 1. RBAC 설정 (최초 1회)
+
+```yaml
+# k8s/scaler-rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scaler
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: scaler-role
+rules:
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "deployments/scale"]
+  verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: scaler-binding
+subjects:
+- kind: ServiceAccount
+  name: scaler
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: scaler-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+```bash
+kubectl apply -f k8s/scaler-rbac.yaml
+```
+
+#### 2. 스케일업/다운 CronJob
+
+```yaml
+# k8s/ticket-scaler.yaml
+---
+# 스케일업 (티켓 오픈 30분 전)
+# 예: 매주 금요일 오후 7:30
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ticket-scaleup
+  namespace: kube-system
+spec:
+  schedule: "30 19 * * 5"  # 수정 필요: 티켓 오픈 일정에 맞게
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: scaler
+          containers:
+          - name: scaler
+            image: bitnami/kubectl:1.29
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting scale up..."
+              kubectl patch hpa backend-queue -n backend -p '{"spec":{"minReplicas":20}}' || true
+              kubectl patch hpa backend-seat -n backend -p '{"spec":{"minReplicas":15}}' || true
+              kubectl patch hpa backend-auth -n backend -p '{"spec":{"minReplicas":10}}' || true
+              kubectl patch hpa backend-order -n backend -p '{"spec":{"minReplicas":10}}' || true
+              kubectl patch hpa frontend -n frontend -p '{"spec":{"minReplicas":10}}' || true
+              echo "Scale up completed. Waiting for nodes..."
+              sleep 180  # 3분 대기 (노드 프로비저닝)
+              kubectl get nodes
+              kubectl get pods -A | grep -v Running | grep -v Completed || echo "All pods running"
+          restartPolicy: OnFailure
+---
+# 스케일다운 (티켓 오픈 2시간 후)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ticket-scaledown
+  namespace: kube-system
+spec:
+  schedule: "0 22 * * 5"  # 수정 필요: 티켓 오픈 2시간 후
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: scaler
+          containers:
+          - name: scaler
+            image: bitnami/kubectl:1.29
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting scale down..."
+              kubectl patch hpa backend-queue -n backend -p '{"spec":{"minReplicas":2}}' || true
+              kubectl patch hpa backend-seat -n backend -p '{"spec":{"minReplicas":2}}' || true
+              kubectl patch hpa backend-auth -n backend -p '{"spec":{"minReplicas":2}}' || true
+              kubectl patch hpa backend-order -n backend -p '{"spec":{"minReplicas":2}}' || true
+              kubectl patch hpa frontend -n frontend -p '{"spec":{"minReplicas":2}}' || true
+              echo "Scale down completed."
+          restartPolicy: OnFailure
+```
+
+```bash
+# CronJob 적용
+kubectl apply -f k8s/ticket-scaler.yaml
+
+# CronJob 확인
+kubectl get cronjob -n kube-system
+
+# 수동 테스트 (즉시 실행)
+kubectl create job --from=cronjob/ticket-scaleup test-scaleup -n kube-system
+kubectl logs -f job/test-scaleup -n kube-system
+kubectl delete job test-scaleup -n kube-system
+```
+
+#### 3. 수동 스케일업 (CronJob 대신 직접 실행)
+
+```bash
+# 스케일업
+kubectl patch hpa backend-queue -n backend -p '{"spec":{"minReplicas":20}}'
+kubectl patch hpa backend-seat -n backend -p '{"spec":{"minReplicas":15}}'
+kubectl patch hpa backend-auth -n backend -p '{"spec":{"minReplicas":10}}'
+kubectl patch hpa backend-order -n backend -p '{"spec":{"minReplicas":10}}'
+kubectl patch hpa frontend -n frontend -p '{"spec":{"minReplicas":10}}'
+
+# 노드 프로비저닝 확인 (2-3분 대기)
+kubectl get nodes -w
+
+# 스케일다운
+kubectl patch hpa backend-queue -n backend -p '{"spec":{"minReplicas":2}}'
+kubectl patch hpa backend-seat -n backend -p '{"spec":{"minReplicas":2}}'
+kubectl patch hpa backend-auth -n backend -p '{"spec":{"minReplicas":2}}'
+kubectl patch hpa backend-order -n backend -p '{"spec":{"minReplicas":2}}'
+kubectl patch hpa frontend -n frontend -p '{"spec":{"minReplicas":2}}'
+```
+
+### 체크리스트
+
+#### T-24시간
 
 - [ ] 모니터링 대시보드 확인
 - [ ] 최근 배포 이슈 없는지 확인
 - [ ] RDS/Redis 상태 확인
+- [ ] CronJob 스케줄 확인 (`kubectl get cronjob -n kube-system`)
 
-### T-2시간
+#### T-30분 (CronJob 자동 실행 또는 수동)
 
-- [ ] EKS 노드 수동 스케일업
-  ```bash
-  # HPA min replicas 증가
-  kubectl patch hpa backend-queue -n backend \
-    -p '{"spec":{"minReplicas":10}}'
-  ```
-- [ ] Redis 메모리 여유 확인
-
-### T-30분
-
-- [ ] 모든 Pod Running 상태 확인
+- [ ] 스케일업 완료 확인
+- [ ] 노드 프로비저닝 완료 확인 (`kubectl get nodes`)
+- [ ] 모든 Pod Running 상태 확인 (`kubectl get pods -A | grep -v Running`)
 - [ ] AI 서비스 응답 테스트
 - [ ] 대기열 서비스 테스트
 
-### 오픈 중
+#### 오픈 중
 
 - [ ] Grafana 실시간 모니터링
 - [ ] Slack 알림 채널 주시
 - [ ] 문제 발생 시 즉시 대응
 
-### 오픈 후
+#### 오픈 후 2시간 (CronJob 자동 실행 또는 수동)
 
-- [ ] 스케일다운 (Karpenter 자동)
+- [ ] 스케일다운 완료 확인
 - [ ] 로그 분석
 - [ ] 이슈 리뷰
 

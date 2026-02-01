@@ -2,9 +2,9 @@
 
 ## 프로젝트 기간
 
-- **prod**: 3-4주 (약 1달)
-- **dev (AI AWS)**: 2.5달
-- **총 프로젝트 기간**: 4개월
+- **prod**: 4주 (1달)
+- **dev (미니PC)**: 2달 (Backend, Frontend, AI 모두)
+- **총 프로젝트 기간**: 약 3개월
 
 ## Prod 환경 월간 비용
 
@@ -15,7 +15,7 @@
 | **ECS Fargate (AI)** | Spot × 2, 1vCPU/2GB | ~$22 | AZ 분산 |
 | **RDS PostgreSQL** | db.t3.medium | ~$60 | Multi-AZ 미사용 |
 | **ElastiCache Redis** | r6g.large × 3 shards | ~$300-350 | 대기열 처리 |
-| **NAT Instance** | t3.micro | ~$8 | NAT Gateway 대비 $32 절감 |
+| **NAT Instance** | t3.micro × 2 (HA) | ~$16 | NAT Gateway 대비 ~$74 절감 |
 | **S3** | 4 buckets (~100GB) | ~$5 | 수명주기 적용 |
 | **CloudFront** | 5 distributions | ~$50-100 | 트래픽 의존 |
 | **Route53** | 1 hosted zone | ~$1 | |
@@ -24,37 +24,66 @@
 | **ECR** | 8 repositories | ~$3 | 이미지 저장 |
 | **CloudWatch** | Logs, Metrics | ~$10-20 | 사용량 의존 |
 
-### Prod 월간 총계: **~$710-850**
+### Prod 월간 총계: **~$720-860**
 
 ## Dev 환경 비용
 
-### 미니PC (k3s) - 추천
+### 미니PC (k3s) - Backend, Frontend, AI 모두
 
-| 항목 | 비용 |
-|------|------|
-| AWS 비용 | **$0** |
-| 전기세 | 미니PC 자체 비용 |
+| 항목 | 구성 | 비용 |
+|------|------|------|
+| Backend (5개 MSA) | k3s Pods | $0 |
+| Frontend | k3s Pod | $0 |
+| **AI (2개 서비스)** | **k3s Pods** | **$0** |
+| PostgreSQL | k3s Pod | $0 |
+| Redis | k3s Pod | $0 |
 
-### AI Dev (AWS Fargate Spot)
+> dev 환경은 미니PC k3s에서 모든 서비스를 실행합니다.
+> AWS 비용이 발생하지 않습니다.
 
-| 서비스 | 사양 | 월 비용 |
-|--------|------|---------|
-| ECS Fargate Spot | 1vCPU/2GB × 1 | ~$11 |
+**Dev 2달 총계: $0**
 
-**AI dev 2.5달 총계: ~$28**
+## AI 데이터 비용 (MongoDB Atlas + S3)
+
+### MongoDB Atlas
+
+| 티어 | 저장 용량 | 월 비용 | 비고 |
+|------|-----------|---------|------|
+| **M0 Free** | 512MB | **$0** | TTL로 용량 관리 |
+| Flex | 5GB | $8-30 | 상한 있음 (필요시) |
+
+> TTL 설정으로 데이터 자동 삭제 → Free 티어로 충분
+
+### S3 AI 버킷
+
+| 버킷 | 용도 | 예상 용량 | 월 비용 |
+|------|------|-----------|---------|
+| ai-trajectory | 궤적 아카이브 | ~1GB/월 | ~$0.004 (Glacier IR) |
+| ai-vqa-data | VQA 아카이브 | ~500MB/월 | ~$0.01 (Standard-IA) |
+| ai-vqa-images | VQA 이미지 | ~2GB | ~$0.05 (Standard) |
+
+### Lambda 백업
+
+| 항목 | 월 비용 |
+|------|---------|
+| Lambda 실행 (30회/월) | ~$0.01 |
+| CloudWatch Logs | ~$0.01 |
+
+**AI 데이터 월간 총계: ~$0.08** (거의 무료)
 
 ## 비용 최적화 상세
 
 ### 1. NAT Instance vs NAT Gateway
 
-| 항목 | NAT Gateway | NAT Instance |
-|------|-------------|--------------|
-| 월 비용 | ~$45 | ~$8-10 |
+| 항목 | NAT Gateway × 2 | NAT Instance × 2 |
+|------|-----------------|------------------|
+| 월 비용 | ~$90 | ~$16 |
 | 데이터 처리 | $0.045/GB | 없음 |
-| 가용성 | 관리형 HA | 단일 인스턴스 |
+| 가용성 | 관리형 HA | AZ별 1개 (HA) |
 | 대역폭 | 45Gbps | 인스턴스 의존 |
+| 관리 | AWS | 직접 관리 |
 
-**선택: NAT Instance** (4개월 프로젝트, 비용 우선)
+**선택: NAT Instance × 2** (고가용성 + 비용 절감)
 
 ### 2. 100% Spot vs On-Demand 혼합
 
@@ -75,40 +104,39 @@
 
 **선택: Fargate Spot** (70% 절감)
 
-### 4. RDS Reserved vs On-Demand
+### 4. Dev RDS: AWS vs Pod
 
 | 구성 | 월 비용 | 비고 |
 |------|---------|------|
-| On-Demand | ~$60 | 유연함 |
-| Reserved 1년 | ~$36 | 40% 절감 |
+| AWS RDS (db.t3.micro) | ~$15 | 관리형 |
+| **k3s Pod (PostgreSQL)** | **$0** | 직접 관리 |
 
-**선택: On-Demand** (4개월 프로젝트)
+**선택: k3s Pod** (dev 환경은 비용 $0)
 
 ## 전체 프로젝트 비용 예측
 
-### Prod (3-4주 = 1달)
+### Prod (4주 = 1달)
 
 ```
-EKS + 노드 + 기타 서비스
-= ~$710-850
+EKS + 노드 + RDS + Redis + 기타
+= ~$720-860
+중간값: ~$790
 ```
 
-### Dev (2.5달)
+### Dev (2달)
 
 ```
-AI Fargate Spot = ~$11/월 × 2.5달 = ~$28
-미니PC 기타 서비스 = $0
+미니PC (Backend, Frontend, AI, DB, Redis) = $0
 ```
 
 ### 총 비용
 
 | 기간 | 환경 | 비용 |
 |------|------|------|
-| 1달 | prod | ~$750 |
-| 2.5달 | AI dev (AWS) | ~$28 |
-| 2.5달 | dev (미니PC) | $0 |
+| 4주 (1달) | prod | ~$790 |
+| 2달 | dev (미니PC) | $0 |
 
-**4개월 총 예상 비용: ~$780**
+**프로젝트 총 예상 비용: ~$790**
 
 ## 비용 모니터링
 
@@ -146,13 +174,17 @@ resource "aws_budgets_budget" "monthly" {
 
 ## 비용 절감 체크리스트
 
-- [x] NAT Gateway → NAT Instance
+- [x] NAT Gateway → NAT Instance × 2
 - [x] EKS 100% Spot
 - [x] ECS Fargate Spot
 - [x] S3 수명주기 정책
 - [x] ECR 이미지 수명주기
-- [x] Reserved Instance 미사용 (4개월)
-- [x] dev 환경 미니PC 활용
+- [x] Reserved Instance 미사용 (단기 프로젝트)
+- [x] dev 환경 미니PC 활용 (Backend, Frontend, AI 모두)
+- [x] dev RDS/Redis → k3s Pod
+- [x] **MongoDB Atlas Free** (TTL로 용량 관리)
+- [x] **S3 Glacier IR** (AI 아카이브 저렴하게 보관)
+- [x] **Lambda 백업** (자동화로 수동 작업 제거)
 - [ ] CloudFront 캐싱 최적화 (운영 중 조정)
 - [ ] Spot 인스턴스 타입 다양화
 
@@ -160,7 +192,10 @@ resource "aws_budgets_budget" "monthly" {
 
 | 항목 | 최적화 전 | 최적화 후 | 절감액 |
 |------|-----------|-----------|--------|
-| NAT | $45 | $8 | $37 |
+| NAT | $90 (Gateway×2) | $16 (Instance×2) | $74 |
 | EKS 노드 | $340 | $170 | $170 |
 | ECS Fargate | $70 | $22 | $48 |
-| **월 총계** | **~$1,100** | **~$750** | **~$350 (32%)** |
+| Dev RDS/Redis | $75 | $0 (Pod) | $75 |
+| AI DB (MongoDB) | $57 (DocumentDB) | $0 (Atlas Free) | $57 |
+| AI 아카이브 | $23 (Standard) | $0.08 (Glacier) | $23 |
+| **월 총계** | **~$1,305** | **~$790** | **~$515 (39%)** | |

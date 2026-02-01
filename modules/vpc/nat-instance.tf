@@ -2,6 +2,7 @@
 
 #------------------------------------------------------------------------------
 # NAT Instance (비용 절감을 위해 NAT Gateway 대신 사용)
+# 고가용성을 위해 각 AZ에 1개씩 배치 (총 2개)
 #------------------------------------------------------------------------------
 
 # Amazon Linux 2023 AMI
@@ -23,7 +24,7 @@ data "aws_ami" "amazon_linux" {
 # NAT Instance Security Group
 resource "aws_security_group" "nat" {
   name        = "${var.name}-nat-sg"
-  description = "Security group for NAT instance"
+  description = "Security group for NAT instances"
   vpc_id      = aws_vpc.this.id
 
   # Private subnet에서 오는 모든 트래픽 허용
@@ -44,12 +45,15 @@ resource "aws_security_group" "nat" {
   }
 
   # SSH (관리용, 필요시만)
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.admin_cidr_blocks
+  dynamic "ingress" {
+    for_each = length(var.admin_cidr_blocks) > 0 ? [1] : []
+    content {
+      description = "SSH"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = var.admin_cidr_blocks
+    }
   }
 
   # 외부로 나가는 모든 트래픽 허용
@@ -66,11 +70,15 @@ resource "aws_security_group" "nat" {
   })
 }
 
-# NAT Instance
+#------------------------------------------------------------------------------
+# NAT Instances (각 AZ에 1개씩)
+#------------------------------------------------------------------------------
 resource "aws_instance" "nat" {
+  count = length(local.azs)
+
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public[0].id
+  subnet_id                   = aws_subnet.public[count.index].id
   vpc_security_group_ids      = [aws_security_group.nat.id]
   source_dest_check           = false # NAT에 필수
   associate_public_ip_address = true
@@ -94,7 +102,7 @@ resource "aws_instance" "nat" {
   EOF
 
   tags = merge(var.tags, {
-    Name = "${var.name}-nat-instance"
+    Name = "${var.name}-nat-instance-${local.azs[count.index]}"
   })
 
   lifecycle {
@@ -102,13 +110,15 @@ resource "aws_instance" "nat" {
   }
 }
 
-# Elastic IP for NAT Instance
+# Elastic IP for NAT Instances
 resource "aws_eip" "nat" {
-  instance = aws_instance.nat.id
+  count = length(local.azs)
+
+  instance = aws_instance.nat[count.index].id
   domain   = "vpc"
 
   tags = merge(var.tags, {
-    Name = "${var.name}-nat-eip"
+    Name = "${var.name}-nat-eip-${local.azs[count.index]}"
   })
 
   depends_on = [aws_internet_gateway.this]

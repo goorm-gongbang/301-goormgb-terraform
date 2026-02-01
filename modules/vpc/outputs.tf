@@ -35,9 +35,9 @@ output "elasticache_subnet_group_name" {
   value       = aws_elasticache_subnet_group.this.name
 }
 
-output "nat_public_ip" {
-  description = "NAT instance public IP"
-  value       = aws_eip.nat.public_ip
+output "nat_public_ips" {
+  description = "NAT instances public IPs"
+  value       = aws_eip.nat[*].public_ip
 }
 
 output "availability_zones" {

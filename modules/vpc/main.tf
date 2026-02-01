@@ -124,16 +124,18 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# Private Route Table (각 AZ별로 분리 - 고가용성)
 resource "aws_route_table" "private" {
+  count  = length(local.azs)
   vpc_id = aws_vpc.this.id
 
   route {
     cidr_block           = "0.0.0.0/0"
-    network_interface_id = aws_instance.nat.primary_network_interface_id
+    network_interface_id = aws_instance.nat[count.index].primary_network_interface_id
   }
 
   tags = merge(var.tags, {
-    Name = "${var.name}-private-rt"
+    Name = "${var.name}-private-rt-${local.azs[count.index]}"
   })
 }
 
@@ -141,12 +143,12 @@ resource "aws_route_table_association" "private" {
   count = length(aws_subnet.private)
 
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[count.index].id
 }
 
 resource "aws_route_table_association" "database" {
   count = length(aws_subnet.database)
 
   subnet_id      = aws_subnet.database[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[count.index].id
 }

@@ -44,3 +44,42 @@ output "backup_bucket_arn" {
   description = "Backup bucket ARN"
   value       = aws_s3_bucket.backup.arn
 }
+
+#------------------------------------------------------------------------------
+# AI Bucket Outputs
+#------------------------------------------------------------------------------
+
+output "ai_trajectory_bucket_id" {
+  description = "AI trajectory archive bucket ID"
+  value       = aws_s3_bucket.ai_trajectory.id
+}
+
+output "ai_trajectory_bucket_arn" {
+  description = "AI trajectory archive bucket ARN"
+  value       = aws_s3_bucket.ai_trajectory.arn
+}
+
+output "ai_vqa_data_bucket_id" {
+  description = "AI VQA data bucket ID"
+  value       = aws_s3_bucket.ai_vqa_data.id
+}
+
+output "ai_vqa_data_bucket_arn" {
+  description = "AI VQA data bucket ARN"
+  value       = aws_s3_bucket.ai_vqa_data.arn
+}
+
+output "ai_vqa_images_bucket_id" {
+  description = "AI VQA images bucket ID"
+  value       = aws_s3_bucket.ai_vqa_images.id
+}
+
+output "ai_vqa_images_bucket_arn" {
+  description = "AI VQA images bucket ARN"
+  value       = aws_s3_bucket.ai_vqa_images.arn
+}
+
+output "ai_vqa_images_bucket_domain_name" {
+  description = "AI VQA images bucket domain name (for CloudFront)"
+  value       = aws_s3_bucket.ai_vqa_images.bucket_regional_domain_name
+}

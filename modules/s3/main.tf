@@ -138,3 +138,147 @@ resource "aws_s3_bucket_lifecycle_configuration" "backup" {
     }
   }
 }
+
+#------------------------------------------------------------------------------
+# AI Data Buckets (MongoDB Archive + VQA)
+#------------------------------------------------------------------------------
+
+# AI Trajectory Archive (MongoDB 궤적 데이터 백업)
+resource "aws_s3_bucket" "ai_trajectory" {
+  bucket = "${var.name}-ai-trajectory-${var.environment}"
+
+  tags = merge(var.tags, {
+    Name    = "${var.name}-ai-trajectory-${var.environment}"
+    Purpose = "MongoDB trajectory data archive"
+  })
+}
+
+resource "aws_s3_bucket_versioning" "ai_trajectory" {
+  bucket = aws_s3_bucket.ai_trajectory.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "ai_trajectory" {
+  bucket = aws_s3_bucket.ai_trajectory.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Trajectory lifecycle (Glacier IR로 저렴하게 보관)
+resource "aws_s3_bucket_lifecycle_configuration" "ai_trajectory" {
+  bucket = aws_s3_bucket.ai_trajectory.id
+
+  rule {
+    id     = "transition-to-glacier-ir"
+    status = "Enabled"
+
+    # 7일 후 Glacier Instant Retrieval (저렴하지만 즉시 조회 가능)
+    transition {
+      days          = 7
+      storage_class = "GLACIER_IR"
+    }
+
+    # 1년 후 Deep Archive (최저 비용)
+    transition {
+      days          = 365
+      storage_class = "DEEP_ARCHIVE"
+    }
+
+    # 3년 후 삭제 (필요시 조정)
+    expiration {
+      days = 1095
+    }
+  }
+}
+
+# AI VQA Quiz Data (MongoDB VQA 퀴즈 데이터 백업)
+resource "aws_s3_bucket" "ai_vqa_data" {
+  bucket = "${var.name}-ai-vqa-data-${var.environment}"
+
+  tags = merge(var.tags, {
+    Name    = "${var.name}-ai-vqa-data-${var.environment}"
+    Purpose = "MongoDB VQA quiz data archive"
+  })
+}
+
+resource "aws_s3_bucket_versioning" "ai_vqa_data" {
+  bucket = aws_s3_bucket.ai_vqa_data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "ai_vqa_data" {
+  bucket = aws_s3_bucket.ai_vqa_data.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# VQA Data lifecycle (자주 조회할 수 있으므로 Standard-IA)
+resource "aws_s3_bucket_lifecycle_configuration" "ai_vqa_data" {
+  bucket = aws_s3_bucket.ai_vqa_data.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    # 30일 후 Standard-IA (자주 조회 가능)
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    # 180일 후 Glacier IR
+    transition {
+      days          = 180
+      storage_class = "GLACIER_IR"
+    }
+  }
+}
+
+# AI VQA Images (VQA 퀴즈용 이미지)
+resource "aws_s3_bucket" "ai_vqa_images" {
+  bucket = "${var.name}-ai-vqa-images-${var.environment}"
+
+  tags = merge(var.tags, {
+    Name    = "${var.name}-ai-vqa-images-${var.environment}"
+    Purpose = "VQA quiz images"
+  })
+}
+
+resource "aws_s3_bucket_versioning" "ai_vqa_images" {
+  bucket = aws_s3_bucket.ai_vqa_images.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "ai_vqa_images" {
+  bucket = aws_s3_bucket.ai_vqa_images.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# VQA Images CORS (필요시 프론트엔드에서 직접 업로드)
+resource "aws_s3_bucket_cors_configuration" "ai_vqa_images" {
+  bucket = aws_s3_bucket.ai_vqa_images.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST"]
+    allowed_origins = var.cors_allowed_origins
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3600
+  }
+}
