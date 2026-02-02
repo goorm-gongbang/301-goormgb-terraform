@@ -5,6 +5,18 @@
 단기 프로젝트(3개월)에 최적화된 S3 로그 관리 전략입니다.
 Glacier 전환 없이 **지정된 날짜에 자동 삭제(Expiration)**만 사용합니다.
 
+> **참고**: 장기 보관이 필요한 MongoDB 아카이브 데이터는 별도 버킷(`goormgb-ai-trajectory-prod`, `goormgb-ai-vqa-data-prod`)에 저장됩니다. → [S3_DATA_REUSE.md](./S3_DATA_REUSE.md) 참조
+
+---
+
+## 버킷 용도 구분
+
+| 버킷 | 용도 | 보관 기간 | 문서 |
+|------|------|-----------|------|
+| `goormgb-logs-prod` | 실시간 로그/분석 데이터 | 3~30일 | 이 문서 |
+| `goormgb-ai-trajectory-prod` | MongoDB 궤적 백업 아카이브 | 3년 | S3_DATA_REUSE.md |
+| `goormgb-ai-vqa-data-prod` | MongoDB VQA 백업 아카이브 | 장기 | S3_DATA_REUSE.md |
+
 ---
 
 ## 버킷 구조

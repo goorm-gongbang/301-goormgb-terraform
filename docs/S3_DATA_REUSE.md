@@ -4,6 +4,18 @@
 
 MongoDB Atlas에서 TTL로 삭제되기 전에 S3에 백업된 데이터를 재사용하는 방법입니다.
 
+> **참고**: 실시간 로그 데이터(인프라, 웹, AI 분석)는 별도 버킷(`goormgb-logs-prod`)에 저장됩니다. → [S3_LOGS.md](./S3_LOGS.md) 참조
+
+---
+
+## 버킷 용도 구분
+
+| 버킷 | 용도 | 보관 기간 | 문서 |
+|------|------|-----------|------|
+| `goormgb-ai-trajectory-prod` | MongoDB 궤적 백업 (Lambda) | Glacier IR → 3년 | 이 문서 |
+| `goormgb-ai-vqa-data-prod` | MongoDB VQA 백업 (Lambda) | IA → Glacier IR | 이 문서 |
+| `goormgb-logs-prod` | 실시간 로그/분석 | 3~30일 삭제 | S3_LOGS.md |
+
 ## 아카이브 구조
 
 ```
