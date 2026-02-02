@@ -20,16 +20,6 @@ output "teamcity_instance_profile_name" {
   value       = aws_iam_instance_profile.teamcity.name
 }
 
-output "jenkins_role_arn" {
-  description = "Jenkins IAM Role ARN"
-  value       = aws_iam_role.jenkins.arn
-}
-
-output "jenkins_instance_profile_name" {
-  description = "Jenkins EC2 Instance Profile name"
-  value       = aws_iam_instance_profile.jenkins.name
-}
-
 output "argocd_role_arn" {
   description = "ArgoCD IAM Role ARN (IRSA)"
   value       = length(aws_iam_role.argocd) > 0 ? aws_iam_role.argocd[0].arn : null

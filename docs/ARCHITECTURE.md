@@ -66,7 +66,8 @@
 │  │                                                                          ││
 │  │  ┌────────────────────────────┐  ┌────────────────────────────┐         ││
 │  │  │     RDS PostgreSQL         │  │     ElastiCache Redis      │         ││
-│  │  │     (db.t3.medium)         │  │     (r6g.large × 3)        │         ││
+│  │  │  db.t4g.medium (Graviton)  │  │  r6g.large × 3 (Graviton)  │         ││
+│  │  │  Multi-AZ (고가용성)       │  │                            │         ││
 │  │  │                            │  │                            │         ││
 │  │  │  ├─ goormgb_backend (BE)   │  │  - 티켓 대기열 (List)      │         ││
 │  │  │  └─ goormgb_ai (AI+pgvec)  │  │  - 순번 관리 (Sorted Set)  │         ││
@@ -349,7 +350,7 @@
 |------|------|-----------|------|
 | goormgb-static | Next.js 정적 파일 | - | CloudFront OAC |
 | goormgb-images | 일반 이미지 | - | CloudFront OAC |
-| goormgb-logs | 로그 | 30d→IA, 90d→Glacier, 1y→삭제 | |
+| goormgb-logs | 로그 | ai-data 30일, infra 3일, web 14일 | prefix별 차등 |
 | goormgb-backup | 일반 백업 | 30d→Glacier, 1y→삭제 | |
 | **goormgb-ai-trajectory** | 궤적 데이터 아카이브 | 7d→Glacier IR, 1y→Deep, 3y→삭제 | MongoDB 백업 |
 | **goormgb-ai-vqa-data** | VQA 퀴즈/결과 아카이브 | 30d→IA, 180d→Glacier IR | MongoDB 백업 |

@@ -104,12 +104,21 @@ terraform apply -var="environment=prod"
 ## 비용 최적화
 
 - **100% Spot Instance**: EKS 노드, ECS Fargate
-- **NAT Instance**: NAT Gateway 대비 ~$32/월 절감
-- **S3 수명주기**: 30일 → IA → Glacier
+- **NAT Instance**: NAT Gateway 대비 ~$74/월 절감
+- **RDS Graviton (db.t4g.medium)**: ARM 기반 + Multi-AZ
+- **ElastiCache Graviton (r6g.large)**: ARM 기반 Redis
+- **S3 수명주기**: prefix별 차등 삭제 (AI 30일, 인프라 3일, 웹 14일)
 - **ECR 수명주기**: 오래된 이미지 자동 삭제
+
+**예상 비용**: ~$620 (Prod 3주)
 
 ## 관련 문서
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - 상세 아키텍처
-- [COST.md](./COST.md) - 비용 예측
-- [RUNBOOK.md](./RUNBOOK.md) - 운영 가이드
+| 문서                                 | 설명                             |
+| ------------------------------------ | -------------------------------- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 상세 아키텍처                    |
+| [COST.md](./COST.md)                 | 비용 예측                        |
+| [RUNBOOK.md](./RUNBOOK.md)           | 운영 가이드                      |
+| [IAM.md](./IAM.md)                   | IAM 사용자/그룹/Role 관리        |
+| [S3_LOGS.md](./S3_LOGS.md)           | S3 로그 버킷 구조 및 배치 업로드 |
+| [HELM_GUIDE.md](./HELM_GUIDE.md)     | Helm 차트 가이드                 |

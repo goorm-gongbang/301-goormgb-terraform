@@ -89,6 +89,9 @@ module "rds" {
   db_subnet_group_name  = module.vpc.db_subnet_group_name
   eks_security_group_id = module.eks.node_security_group_id
 
+  # Graviton + Multi-AZ (고가용성)
+  instance_class  = "db.t4g.medium"
+  multi_az        = true
   master_password = var.db_password
 
   tags = local.tags

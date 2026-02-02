@@ -39,9 +39,9 @@ variable "engine_version" {
 }
 
 variable "instance_class" {
-  description = "RDS instance class"
+  description = "RDS instance class (Graviton recommended)"
   type        = string
-  default     = "db.t3.medium"
+  default     = "db.t4g.medium"
 }
 
 variable "allocated_storage" {

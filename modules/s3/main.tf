@@ -72,26 +72,78 @@ resource "aws_s3_bucket_public_access_block" "logs" {
   restrict_public_buckets = true
 }
 
-# Logs lifecycle (비용 절감)
+# Logs lifecycle (prefix별 수명주기 정책)
 resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
 
+  # AI 분석 데이터 (마우스 궤적, 보안 퀴즈) - 30일 보관
+  # dev/prod 같이 저장, JSON 내 env 필드로 구분
   rule {
-    id     = "transition-to-ia"
+    id     = "ai-data-expiration"
     status = "Enabled"
 
-    transition {
-      days          = 30
-      storage_class = "STANDARD_IA"
-    }
-
-    transition {
-      days          = 90
-      storage_class = "GLACIER"
+    filter {
+      prefix = "ai-data/"
     }
 
     expiration {
-      days = 365
+      days = 30
+    }
+  }
+
+  # 인프라 운영 로그 (Istio, K8s, Loki) - 3일 보관
+  # 이슈 발생 즉시 해결하지 않으면 의미 없음, 용량 차지 방지
+  rule {
+    id     = "infra-dev-expiration"
+    status = "Enabled"
+
+    filter {
+      prefix = "infra/dev/"
+    }
+
+    expiration {
+      days = 3
+    }
+  }
+
+  rule {
+    id     = "infra-prod-expiration"
+    status = "Enabled"
+
+    filter {
+      prefix = "infra/prod/"
+    }
+
+    expiration {
+      days = 3
+    }
+  }
+
+  # 서비스 관제 로그 (웹/FastAPI APM) - 14일 보관
+  # 시나리오 테스트, 버그 리포트 확인용
+  rule {
+    id     = "web-dev-expiration"
+    status = "Enabled"
+
+    filter {
+      prefix = "web/dev/"
+    }
+
+    expiration {
+      days = 14
+    }
+  }
+
+  rule {
+    id     = "web-prod-expiration"
+    status = "Enabled"
+
+    filter {
+      prefix = "web/prod/"
+    }
+
+    expiration {
+      days = 14
     }
   }
 }

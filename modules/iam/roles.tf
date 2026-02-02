@@ -87,38 +87,7 @@ resource "aws_iam_role_policy_attachment" "teamcity" {
 }
 
 # -----------------------------------------------
-# 3. Jenkins Role (EC2 Instance Profile)
-# -----------------------------------------------
-resource "aws_iam_role" "jenkins" {
-  name = "jenkins-role"
-  path = "/services/"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_instance_profile" "jenkins" {
-  name = "jenkins-instance-profile"
-  role = aws_iam_role.jenkins.name
-}
-
-resource "aws_iam_role_policy_attachment" "jenkins" {
-  role       = aws_iam_role.jenkins.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
-
-# -----------------------------------------------
-# 4. ArgoCD Role (EKS IRSA)
+# 3. ArgoCD Role (EKS IRSA)
 # -----------------------------------------------
 variable "eks_oidc_provider_arn" {
   description = "EKS OIDC provider ARN for IRSA"
