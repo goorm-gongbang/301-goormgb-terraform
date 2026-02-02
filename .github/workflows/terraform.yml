@@ -5,19 +5,19 @@ on:
     branches:
       - main
     paths:
-      - 'environments/**'
       - 'modules/**'
-      - '*.tf'
+      - '*.tf'        # 루트의 tf 파일 변경 감지
+      - '.github/workflows/**'
   push:
     branches:
       - main
     paths:
-      - 'environments/**'
       - 'modules/**'
       - '*.tf'
+      - '.github/workflows/**'
 
 env:
-  TF_VERSION: '1.5.7'
+  TF_VERSION: '1.5.7' # 사용하는 테라폼 버전에 맞춰주세요 (예: 1.9.0 등)
   AWS_REGION: 'ap-northeast-2'
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # 깃허브 Secret에 등록 필요
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
@@ -44,31 +44,39 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Plan - All Environments
-        id: plan
-        run: |
-          PLAN_OUTPUT=""
-          for env in shared dev prod ai; do
-            echo "========== $env =========="
-            cd environments/$env
-            terraform init -input=false
-            terraform validate
-            PLAN_OUTPUT+="## $env\n\`\`\`\n$(terraform plan -no-color 2>&1)\n\`\`\`\n\n"
-            cd ../..
-          done
-          echo "plan<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$PLAN_OUTPUT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        continue-on-error: true
+      - name: Terraform Init
+        run: terraform init
 
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        # Plan 결과를 변수에 담지 않고 바로 파일로 저장하거나 로그로 확인
+        # -no-color: 깃허브 코멘트에 넣기 위해 색상 코드 제거
+        run: |
+          terraform plan -no-color > plan.txt
+        continue-on-error: false # Plan 실패 시 워크플로우 중단 (안전)
+
+      # Plan 결과를 PR 댓글로 달기 (너무 길면 잘릴 수 있음)
       - name: Comment PR with Plan
         uses: actions/github-script@v7
         with:
           script: |
-            const output = `### Terraform Plan Results
+            const fs = require('fs');
+            const plan = fs.readFileSync('plan.txt', 'utf8');
+            // 코멘트 길이 제한(65536자) 고려하여 최대 60000자까지만 자름
+            const truncatedPlan = plan.length > 60000 ? plan.substring(0, 60000) + "\n... (Plan too long, check Action logs)" : plan;
 
-            ${{ steps.plan.outputs.plan }}
+            const output = `#### Terraform Plan 📖
+            <details><summary>Show Plan</summary>
 
+            \`\`\`hcl
+            ${truncatedPlan}
+            \`\`\`
+
+            </details>
+            
             *Pushed by: @${{ github.actor }}*`;
 
             github.rest.issues.createComment({
@@ -81,6 +89,7 @@ jobs:
   terraform-apply:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    needs: terraform-plan # (옵션) Plan 잡이 성공했는지 체크하진 않지만 의존성 명시 가능
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,13 +105,8 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Apply - All Environments
-        run: |
-          # 순서: shared -> dev -> prod -> ai (의존성 순서)
-          for env in shared dev prod ai; do
-            echo "========== Applying $env =========="
-            cd environments/$env
-            terraform init -input=false
-            terraform apply -auto-approve
-            cd ../..
-          done
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
