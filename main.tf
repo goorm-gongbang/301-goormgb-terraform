@@ -6,5 +6,5 @@ module "iam" {
 module "oidc" {
   source = "./modules/oidc"
 
-  github_repo = "goorm-gongbang/https://github.com/goorm-gongbang/301-goormgb-terraform.git"
+  github_repo = "goorm-gongbang/301-goormgb-terraform"
 }
