@@ -1,7 +1,7 @@
 # Helm Chart 구성 가이드
 
 이 문서는 GoormGB 인프라의 Helm Chart 구성을 위한 가이드입니다.
-Helm Chart를 만들 때 참고하세요.
+다른 세션에서 Helm Chart를 만들 때 참고하세요.
 
 ## 프로젝트 개요
 

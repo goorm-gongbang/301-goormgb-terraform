@@ -37,6 +37,13 @@ locals {
     "CS-minwook" = ["security"]
     "CS-wanwoo"  = ["security"]
     "CS-jiseo"   = ["security"]
+
+    # -----------------------------------------------
+    # 7. Infra Group (CN -> infra)
+    # -----------------------------------------------
+    "CN-7eehy3"  = ["infra"]
+    "CN-chamchi" = ["infra"]
+    "CN-wonny"   = ["infra"]
   }
 }
 

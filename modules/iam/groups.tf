@@ -25,7 +25,11 @@ locals {
       "arn:aws:iam::aws:policy/AWSBillingReadOnlyAccess"
     ]
     "AI" = [
-      "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+      "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess",
+      "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly"
+    ]
+    "infra" = [
+      "arn:aws:iam::aws:policy/AdministratorAccess"
     ]
     "security" = [
       "arn:aws:iam::aws:policy/SecurityAudit",
