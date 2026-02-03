@@ -105,7 +105,7 @@ jobs:
           PR_NUMBER: ${{  github.event.pull_request.number  }}
           ACTOR: ${{  github.actor  }}
           BRANCH_INFO: "${{  github.head_ref  }} -> ${{  github.base_ref  }}"
-          Actoin_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
+          Action_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
 
   terraform-apply:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -142,4 +142,4 @@ jobs:
           RESULT_FILE: 'plan.txt'
           ACTOR: ${{  github.actor  }}
           BRANCH_INFO: "Main"
-          Actoin_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
+          Action_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
