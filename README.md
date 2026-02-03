@@ -158,7 +158,7 @@ PR 생성/업데이트 → terraform plan (결과 PR 코멘트)
   main 머지 → terraform apply (shared → dev → prod → ai)
 ```
 
-## 환경별 비용
+## 환경별 비용!
 
 | 환경              | 기간  | 월 비용 | 총 비용   |
 | ----------------- | ----- | ------- | --------- |
@@ -169,7 +169,7 @@ PR 생성/업데이트 → terraform plan (결과 PR 코멘트)
 
 > RDS: Graviton (db.t4g.medium) + Multi-AZ / ElastiCache: Graviton (r6g)
 
-## 관련 링크
+## 관련 링크!
 
 - MongoDB Atlas: https://cloud.mongodb.com
 - AWS Console: https://console.aws.amazon.com
