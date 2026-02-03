@@ -1,5 +1,7 @@
 # Lambda MongoDB Backup 가이드
 
+# test
+
 ## 개요
 
 MongoDB Atlas의 데이터를 TTL 만료 전에 S3로 자동 백업하는 Lambda 함수입니다.
@@ -46,11 +48,11 @@ MongoDB Atlas의 데이터를 TTL 만료 전에 S3로 자동 백업하는 Lambda
 
 ## 백업 스케줄
 
-| 컬렉션 | TTL | 백업 시점 | S3 버킷 |
-|--------|-----|-----------|---------|
-| user_trajectories | 7일 | 6-7일차 데이터 | ai-trajectory |
-| vqa_quizzes | 30일 | 29-30일차 데이터 | ai-vqa-data |
-| vqa_results | 없음 | 전날 데이터 | ai-vqa-data |
+| 컬렉션            | TTL  | 백업 시점        | S3 버킷       |
+| ----------------- | ---- | ---------------- | ------------- |
+| user_trajectories | 7일  | 6-7일차 데이터   | ai-trajectory |
+| vqa_quizzes       | 30일 | 29-30일차 데이터 | ai-vqa-data   |
+| vqa_results       | 없음 | 전날 데이터      | ai-vqa-data   |
 
 ## 배포 방법
 
@@ -214,11 +216,11 @@ aws logs tail /aws/lambda/goormgb-mongodb-backup-prod --follow
 
 ### CloudWatch Metrics
 
-| 메트릭 | 설명 |
-|--------|------|
-| Invocations | 실행 횟수 |
-| Errors | 에러 횟수 |
-| Duration | 실행 시간 |
+| 메트릭               | 설명         |
+| -------------------- | ------------ |
+| Invocations          | 실행 횟수    |
+| Errors               | 에러 횟수    |
+| Duration             | 실행 시간    |
 | ConcurrentExecutions | 동시 실행 수 |
 
 ### 알림 설정
@@ -239,12 +241,12 @@ resource "aws_sns_topic_subscription" "email" {
 
 ## 비용
 
-| 항목 | 예상 비용 |
-|------|-----------|
-| Lambda 실행 (30회/월) | ~$0.01 |
-| S3 저장 (Glacier IR, 10GB) | ~$0.04 |
-| CloudWatch Logs | ~$0.01 |
-| **월 총계** | **~$0.06** |
+| 항목                       | 예상 비용  |
+| -------------------------- | ---------- |
+| Lambda 실행 (30회/월)      | ~$0.01     |
+| S3 저장 (Glacier IR, 10GB) | ~$0.04     |
+| CloudWatch Logs            | ~$0.01     |
+| **월 총계**                | **~$0.06** |
 
 ## 트러블슈팅
 
@@ -255,6 +257,7 @@ Task timed out after 300.00 seconds
 ```
 
 **해결**:
+
 - Lambda timeout 증가 (최대 15분)
 - 데이터 범위 축소 (TTL 기간 조정)
 
@@ -265,6 +268,7 @@ ServerSelectionTimeoutError: connection closed
 ```
 
 **해결**:
+
 - MongoDB Atlas IP Whitelist 확인
 - Lambda VPC 설정 확인 (NAT Gateway 필요)
 
@@ -275,6 +279,7 @@ AccessDenied: Access Denied
 ```
 
 **해결**:
+
 - Lambda IAM Role에 S3 권한 확인
 - 버킷 정책 확인
 
