@@ -1,0 +1,13 @@
+# .github/auto_assign.yml
+
+# PR에 Assignee(담당자)를 추가할지 여부 (true로 설정)
+addAssignees: true
+
+# PR에 Reviewer(리뷰어)를 추가할지 여부 (필요 없으면 false)
+addReviewers: false
+
+# 자동으로 추가할 팀원들의 깃허브 아이디 목록
+assignees:
+  - Chemuchi
+  - 212clab
+  - jjyeah
