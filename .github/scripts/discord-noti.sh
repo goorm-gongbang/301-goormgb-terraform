@@ -6,17 +6,17 @@ if [ -z "$DISCORD_WEBHOOK" ]; then
   exit 1
 fi
 
-# 2. 결과 파일이 없으면 처리
+# 2. 결과 파일 읽기 및 포맷팅 설정
 if [ ! -f "$RESULT_FILE" ]; then
   RESULT_CONTENT="결과 파일을 찾을 수 없습니다."
   BLOCK_FMT="text"
 else
   # ------------------------------------------------------------------
-  # 핵심 로직: 로그에서 순수한 텍스트만 추출 (포맷팅 태그 제거)
+  # 로그 파싱 로직
   # ------------------------------------------------------------------
 
-  # A. 실패(Failure)한 경우
   if [ "$STATUS" != "success" ]; then
+    # 실패 시 Error 라인 추출
     EXTRACTED=$(grep "Error:" "$RESULT_FILE" | head -n 1)
     if [ -z "$EXTRACTED" ]; then
       EXTRACTED=$(tail -n 3 "$RESULT_FILE")
@@ -24,20 +24,17 @@ else
     RESULT_CONTENT="🚫 오류 발생: $EXTRACTED"
     BLOCK_FMT="text"
 
-  # B. 성공(Success)한 경우
   else
+    # 성공 시 Plan/Apply 구분
     if [ "$NOTIFY_TYPE" == "plan" ]; then
-      # Case 1: 변경 사항이 있는 경우
       PLAN_LINE=$(grep "Plan:" "$RESULT_FILE" | tail -n 1)
-
-      # Case 2: 변경 사항이 없는 경우
       NO_CHANGE_LINE=$(grep "No changes." "$RESULT_FILE" | head -n 1)
 
       if [ ! -z "$PLAN_LINE" ]; then
         RESULT_CONTENT="+ $PLAN_LINE"
-        BLOCK_FMT="diff" # diff를 쓰면 + 기호가 초록색으로 뜸
+        BLOCK_FMT="diff"
       elif [ ! -z "$NO_CHANGE_LINE" ]; then
-        RESULT_CONTENT="✅ No changes. Infrastructure is up-to-date."
+        RESULT_CONTENT="✅ 변경 사항이 없습니다. 모든 인프라가 최신상태 입니다."
         BLOCK_FMT="yaml"
       else
         RESULT_CONTENT="결과 요약을 찾을 수 없습니다. 상세 로그를 확인해주세요."
@@ -45,11 +42,12 @@ else
       fi
 
     elif [ "$NOTIFY_TYPE" == "apply" ]; then
-      APPLY_LINE=$(grep "Apply complete!" "$RESULT_FILE" | tail -n 1)
+      # Apply 완료 메시지 찾기
+      APPLY_LINE=$(grep "적용 성공!" "$RESULT_FILE" | tail -n 1)
 
       if [ ! -z "$APPLY_LINE" ]; then
          RESULT_CONTENT="$APPLY_LINE"
-         BLOCK_FMT="css" # css를 쓰면 일반 텍스트도 깔끔하게 보임
+         BLOCK_FMT="css"
       else
          RESULT_CONTENT="Apply 결과를 찾을 수 없습니다. 상세 로그를 확인해주세요."
          BLOCK_FMT="text"
@@ -58,7 +56,7 @@ else
   fi
 fi
 
-# 3. 상태별 색상 및 타이틀
+# 3. UI/UX 설정
 if [ "$STATUS" == "success" ]; then
   COLOR=5763719 # Green
   EMOJI="✅"
@@ -67,37 +65,59 @@ else
   EMOJI="❌"
 fi
 
+# 수행자 프로필 이미지 (GitHub 기본 프로필 URL 활용)
+USER_ICON="https://github.com/${ACTOR}.png"
+
+# 알림 타입별 필드 설정
 if [ "$NOTIFY_TYPE" == "plan" ]; then
   TITLE="Terraform Plan Result"
-  DESC="PR #$PR_NUMBER 변경 사항 감지"
+  DESC="PR 변경 사항 감지"
+
+  # Plan 단계에서는 브랜치 정보 표시
+  INFO_NAME="브랜치"
+  INFO_VALUE="$BRANCH_INFO"
+
 elif [ "$NOTIFY_TYPE" == "apply" ]; then
   TITLE="Terraform Apply Result"
   DESC="Main 브랜치 배포 완료"
+
+  # Apply 단계에서는 '어떤 PR이 머지되었는지' 커밋 메시지로 표시
+  INFO_NAME="머지 정보 (Commit)"
+  # 커밋 메시지가 너무 길면 첫 줄만 자르기
+  INFO_VALUE=$(echo "$COMMIT_MSG" | head -n 1)
+
 else
   TITLE="Terraform Action"
+  DESC="알 수 없는 액션"
+  INFO_NAME="Info"
+  INFO_VALUE="N/A"
 fi
 
-# 4. JSON 생성 (jq 내부에서 포맷팅 조립)
-# --arg fmt "$BLOCK_FMT" 를 추가하여 언어 설정
-# value 부분에서 "```" + $fmt + "\n" + $content ... 로 조립
+# 4. JSON 생성
+# author 필드를 사용하여 수행자 이름과 프로필 아이콘을 상단에 배치
 PAYLOAD=$(jq -n \
   --arg title "$EMOJI $TITLE" \
   --arg desc "$DESC" \
   --arg color "$COLOR" \
   --arg url "$Action_URL" \
   --arg actor "$ACTOR" \
-  --arg branch "$BRANCH_INFO" \
+  --arg user_icon "$USER_ICON" \
+  --arg info_name "$INFO_NAME" \
+  --arg info_value "$INFO_VALUE" \
   --arg content "$RESULT_CONTENT" \
   --arg fmt "$BLOCK_FMT" \
   '{
     embeds: [{
+      author: {
+        name: $actor,
+        icon_url: $user_icon
+      },
       title: $title,
-      description: ($desc + "\n[👉 Github Actions 바로가기](" + $url + ")"),
+      description: ($desc + "\n[👉 상세 로그 보러가기](" + $url + ")"),
       url: (if $url == "" or $url == null then null else $url end),
       color: ($color | tonumber),
       fields: [
-        {name: "수행자", value: $actor, inline: true},
-        {name: "브랜치", value: $branch, inline: true},
+        {name: $info_name, value: $info_value, inline: true},
         {
           name: "결과 요약",
           value: ("```" + $fmt + "\n" + $content + "\n```"),
@@ -108,11 +128,6 @@ PAYLOAD=$(jq -n \
     }]
   }'
 )
-
-# 디버깅용 출력 (나중에 주석 처리 가능)
-echo "---------------- PAYLOAD ----------------"
-echo "$PAYLOAD"
-echo "-----------------------------------------"
 
 curl -H "Content-Type: application/json" \
      -d "$PAYLOAD" \
