@@ -17,7 +17,7 @@ module "oidc" {
   github_repo = "goorm-gongbang/301-goormgb-terraform"
 }
 
-# Terraform 상태 잠금용 DynamoDB 모듈화 안하고 그냥 일단 이렇게 추가하는걸로
+# Terraform 상태 잠금용 DynamoDB
 resource "aws_dynamodb_table" "terraform_lock" {
   name = "terraform-state-lock"
   billing_mode = "PAY_PER_REQUEST"
