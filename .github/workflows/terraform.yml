@@ -25,7 +25,7 @@ on:
       - '.gitignore'
 
 env:
-  TF_VERSION: '1.5.7' # 사용하는 테라폼 버전에 맞춰주세요 (예: 1.9.0 등)
+  TF_VERSION: '1.5.7'
   AWS_REGION: 'ap-northeast-2'
 
 permissions:
