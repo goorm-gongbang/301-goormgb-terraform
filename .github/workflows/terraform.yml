@@ -99,13 +99,13 @@ jobs:
         run: ./.github/scripts/discord-noti.sh
         env:
           DISCORD_WEBHOOK: ${{  secrets.DISCORD_WEBHOOK_URL  }}
-          NOTIFY_PLAN: 'plan'
+          NOTIFY_TYPE: 'plan'
           STATUS: ${{  job.status  }}
           RESULT_FILE: 'plan.txt'
           PR_NUMBER: ${{  github.event.pull_request.number  }}
           ACTOR: ${{  github.actor  }}
           BRANCH_INFO: "${{  github.head_ref  }} -> ${{  github.base_ref  }}"
-          Actoin_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
+          Action_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
 
   terraform-apply:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -137,9 +137,9 @@ jobs:
         run: ./.github/scripts/discord-noti.sh
         env:
           DISCORD_WEBHOOK: ${{  secrets.DISCORD_WEBHOOK_URL  }}
-          NOTIFY_PLAN: 'apply'
+          NOTIFY_TYPE: 'apply'
           STATUS: ${{  job.status  }}
           RESULT_FILE: 'plan.txt'
           ACTOR: ${{  github.actor  }}
           BRANCH_INFO: "Main"
-          Actoin_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
+          Action_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"

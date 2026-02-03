@@ -1,19 +1,64 @@
 #!/bin/bash
 
-# 필수 변수 확인
+# 1. 필수 변수 체크
 if [ -z "$DISCORD_WEBHOOK" ]; then
   echo "Error: DISCORD_WEBHOOK is not set."
   exit 1
 fi
 
-# 결과 파일 읽기 (없으면 빈 문자열)
-RESULT_CONTENT=""
-if [ -f "$RESULT_FILE" ]; then
-  # 2000자 제한을 고려해 뒤에서 1500자만 자름
-  RESULT_CONTENT=$(tail -c 1500 "$RESULT_FILE")
+# 2. 결과 파일이 없으면 처리
+if [ ! -f "$RESULT_FILE" ]; then
+  RESULT_CONTENT="결과 파일을 찾을 수 없습니다."
+  BLOCK_FMT="text"
+else
+  # ------------------------------------------------------------------
+  # 핵심 로직: 로그에서 순수한 텍스트만 추출 (포맷팅 태그 제거)
+  # ------------------------------------------------------------------
+
+  # A. 실패(Failure)한 경우
+  if [ "$STATUS" != "success" ]; then
+    EXTRACTED=$(grep "Error:" "$RESULT_FILE" | head -n 1)
+    if [ -z "$EXTRACTED" ]; then
+      EXTRACTED=$(tail -n 3 "$RESULT_FILE")
+    fi
+    RESULT_CONTENT="🚫 오류 발생: $EXTRACTED"
+    BLOCK_FMT="text"
+
+  # B. 성공(Success)한 경우
+  else
+    if [ "$NOTIFY_TYPE" == "plan" ]; then
+      # Case 1: 변경 사항이 있는 경우
+      PLAN_LINE=$(grep "Plan:" "$RESULT_FILE" | tail -n 1)
+
+      # Case 2: 변경 사항이 없는 경우
+      NO_CHANGE_LINE=$(grep "No changes." "$RESULT_FILE" | head -n 1)
+
+      if [ ! -z "$PLAN_LINE" ]; then
+        RESULT_CONTENT="+ $PLAN_LINE"
+        BLOCK_FMT="diff" # diff를 쓰면 + 기호가 초록색으로 뜸
+      elif [ ! -z "$NO_CHANGE_LINE" ]; then
+        RESULT_CONTENT="✅ No changes. Infrastructure is up-to-date."
+        BLOCK_FMT="yaml"
+      else
+        RESULT_CONTENT="결과 요약을 찾을 수 없습니다. 상세 로그를 확인해주세요."
+        BLOCK_FMT="text"
+      fi
+
+    elif [ "$NOTIFY_TYPE" == "apply" ]; then
+      APPLY_LINE=$(grep "Apply complete!" "$RESULT_FILE" | tail -n 1)
+
+      if [ ! -z "$APPLY_LINE" ]; then
+         RESULT_CONTENT="$APPLY_LINE"
+         BLOCK_FMT="css" # css를 쓰면 일반 텍스트도 깔끔하게 보임
+      else
+         RESULT_CONTENT="Apply 결과를 찾을 수 없습니다. 상세 로그를 확인해주세요."
+         BLOCK_FMT="text"
+      fi
+    fi
+  fi
 fi
 
-# 상태에 따른 색상 및 타이틀 설정
+# 3. 상태별 색상 및 타이틀
 if [ "$STATUS" == "success" ]; then
   COLOR=5763719 # Green
   EMOJI="✅"
@@ -22,22 +67,19 @@ else
   EMOJI="❌"
 fi
 
-# 메시지 내용 구성 (Plan vs Apply)
 if [ "$NOTIFY_TYPE" == "plan" ]; then
   TITLE="Terraform Plan Result"
-  DESC="PR #$PR_NUMBER 에서 Plan이 실행되었습니다."
-  FIELD_NAME="Plan 요약"
+  DESC="PR #$PR_NUMBER 변경 사항 감지"
 elif [ "$NOTIFY_TYPE" == "apply" ]; then
   TITLE="Terraform Apply Result"
-  DESC="Main 브랜치에 배포(Apply)가 실행되었습니다."
-  FIELD_NAME="Apply 요약"
+  DESC="Main 브랜치 배포 완료"
 else
-  echo "Error: Unknown NOTIFY_TYPE"
-  exit 1
+  TITLE="Terraform Action"
 fi
 
-# JSON 페이로드 생성 (jq 사용)
-# 여기서 템플릿 구조를 관리합니다.
+# 4. JSON 생성 (jq 내부에서 포맷팅 조립)
+# --arg fmt "$BLOCK_FMT" 를 추가하여 언어 설정
+# value 부분에서 "```" + $fmt + "\n" + $content ... 로 조립
 PAYLOAD=$(jq -n \
   --arg title "$EMOJI $TITLE" \
   --arg desc "$DESC" \
@@ -45,27 +87,33 @@ PAYLOAD=$(jq -n \
   --arg url "$Action_URL" \
   --arg actor "$ACTOR" \
   --arg branch "$BRANCH_INFO" \
-  --arg field_name "$FIELD_NAME" \
   --arg content "$RESULT_CONTENT" \
+  --arg fmt "$BLOCK_FMT" \
   '{
-    username: "Terraform Bot",
-    avatar_url: "https://www.terraform.io/img/favicon.png",
     embeds: [{
       title: $title,
-      description: $desc,
-      url: $url,
+      description: ($desc + "\n[👉 Github Actions 바로가기](" + $url + ")"),
+      url: (if $url == "" or $url == null then null else $url end),
       color: ($color | tonumber),
       fields: [
         {name: "수행자", value: $actor, inline: true},
-        {name: "브랜치/PR", value: $branch, inline: true},
-        {name: $field_name, value: ("```hcl\n" + $content + "\n```"), inline: false}
+        {name: "브랜치", value: $branch, inline: true},
+        {
+          name: "결과 요약",
+          value: ("```" + $fmt + "\n" + $content + "\n```"),
+          inline: false
+        }
       ],
       footer: {text: "GitHub Actions • Terraform"}
     }]
   }'
 )
 
-# 디스코드로 전송
+# 디버깅용 출력 (나중에 주석 처리 가능)
+echo "---------------- PAYLOAD ----------------"
+echo "$PAYLOAD"
+echo "-----------------------------------------"
+
 curl -H "Content-Type: application/json" \
      -d "$PAYLOAD" \
      "$DISCORD_WEBHOOK"
