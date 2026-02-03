@@ -1,6 +1,6 @@
 # GoormGB Terraform Infrastructure
 
-티켓팅 플랫폼 GoormGB의 AWS 인프라를 관리하는 Terraform 프로젝트입니다.
+GoormGB의 티켓팅 플랫폼 AWS 인프라를 관리하는 Terraform 프로젝트입니다.
 
 ## 프로젝트 개요
 
