@@ -99,7 +99,7 @@ jobs:
         run: ./.github/scripts/discord-noti.sh
         env:
           DISCORD_WEBHOOK: ${{  secrets.DISCORD_WEBHOOK_URL  }}
-          NOTIFY_PLAN: 'plan'
+          NOTIFY_TYPE: 'plan'
           STATUS: ${{  job.status  }}
           RESULT_FILE: 'plan.txt'
           PR_NUMBER: ${{  github.event.pull_request.number  }}
@@ -137,7 +137,7 @@ jobs:
         run: ./.github/scripts/discord-noti.sh
         env:
           DISCORD_WEBHOOK: ${{  secrets.DISCORD_WEBHOOK_URL  }}
-          NOTIFY_PLAN: 'apply'
+          NOTIFY_TYPE: 'apply'
           STATUS: ${{  job.status  }}
           RESULT_FILE: 'plan.txt'
           ACTOR: ${{  github.actor  }}
