@@ -5,6 +5,10 @@ on:
   pull_request:
     types: [opened, ready_for_review]
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   add-reviews:
     runs-on: ubuntu-latest
