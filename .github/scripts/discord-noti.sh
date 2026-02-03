@@ -42,17 +42,26 @@ else
       fi
 
     elif [ "$NOTIFY_TYPE" == "apply" ]; then
-      # Apply 완료 메시지 찾기
-      APPLY_LINE=$(grep "적용 성공!" "$RESULT_FILE" | tail -n 1)
+          # Case 1: Apply 완료 ("Apply complete! Resources: ...")
+          APPLY_LINE=$(grep "Apply complete!" "$RESULT_FILE" | tail -n 1)
 
-      if [ ! -z "$APPLY_LINE" ]; then
-         RESULT_CONTENT="$APPLY_LINE"
-         BLOCK_FMT="css"
-      else
-         RESULT_CONTENT="Apply 결과를 찾을 수 없습니다. 상세 로그를 확인해주세요."
-         BLOCK_FMT="text"
-      fi
-    fi
+          # Case 2: 변경 사항 없음 ("No changes. ...")
+          NO_CHANGE_LINE=$(grep "No changes." "$RESULT_FILE" | head -n 1)
+
+          if [ ! -z "$APPLY_LINE" ]; then
+             RESULT_CONTENT="$APPLY_LINE"
+             BLOCK_FMT="css"
+          elif [ ! -z "$NO_CHANGE_LINE" ]; then
+             RESULT_CONTENT="✅ 변경 사항이 없습니다. 모든 인프라가 최신상태 입니다."
+             BLOCK_FMT="yaml"
+          else
+             # Case 3: 둘 다 없으면 파일 내용을 일부 보여줌 (에러일 가능성 높음)
+             # 파일의 마지막 3줄을 가져와서 보여줌
+             LAST_LINES=$(tail -n 3 "$RESULT_FILE")
+             RESULT_CONTENT="상태를 파악할 수 없습니다. 로그를 확인하세요.\n---\n$LAST_LINES"
+             BLOCK_FMT="text"
+          fi
+        fi
   fi
 fi
 
