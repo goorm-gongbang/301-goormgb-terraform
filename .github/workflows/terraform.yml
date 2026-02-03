@@ -130,7 +130,8 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        id: apply
+        run: terraform apply -auto-approve -no-color > apply.txt
 
       - name: Notify Discord (Plan)
         if: always()
@@ -139,7 +140,7 @@ jobs:
           DISCORD_WEBHOOK: ${{  secrets.DISCORD_WEBHOOK_URL  }}
           NOTIFY_TYPE: 'apply'
           STATUS: ${{  job.status  }}
-          RESULT_FILE: 'plan.txt'
+          RESULT_FILE: 'apply.txt'
           ACTOR: ${{  github.actor  }}
-          BRANCH_INFO: "Main"
+          COMMIT_MSG: ${{  github.event.head_commit.message }}
           Action_URL: "${{  github.server_url  }}/${{  github.repository  }}/actions/runs/${{  github.run_id  }}"
