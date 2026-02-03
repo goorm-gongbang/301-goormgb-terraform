@@ -90,5 +90,30 @@ PAYLOAD=$(jq -n \
   --arg content "$RESULT_CONTENT" \
   --arg fmt "$BLOCK_FMT" \
   '{
-    username: "Terraform Bot",
-    avatar_url: "
+    embeds: [{
+      title: $title,
+      description: ($desc + "\n[👉 Github Actions 바로가기](" + $url + ")"),
+      url: (if $url == "" or $url == null then null else $url end),
+      color: ($color | tonumber),
+      fields: [
+        {name: "수행자", value: $actor, inline: true},
+        {name: "브랜치", value: $branch, inline: true},
+        {
+          name: "결과 요약",
+          value: ("```" + $fmt + "\n" + $content + "\n```"),
+          inline: false
+        }
+      ],
+      footer: {text: "GitHub Actions • Terraform"}
+    }]
+  }'
+)
+
+# 디버깅용 출력 (나중에 주석 처리 가능)
+echo "---------------- PAYLOAD ----------------"
+echo "$PAYLOAD"
+echo "-----------------------------------------"
+
+curl -H "Content-Type: application/json" \
+     -d "$PAYLOAD" \
+     "$DISCORD_WEBHOOK"
