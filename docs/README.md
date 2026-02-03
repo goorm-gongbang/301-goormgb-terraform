@@ -110,7 +110,7 @@ terraform apply -var="environment=prod"
 - **S3 수명주기**: prefix별 차등 삭제 (AI 30일, 인프라 3일, 웹 14일)
 - **ECR 수명주기**: 오래된 이미지 자동 삭제
 
-**예상 비용**: ~$620 (Prod 3주)
+**예상 비용**: ~$620 (Prod 3주) !
 
 ## 관련 문서
 

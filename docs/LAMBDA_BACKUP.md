@@ -1,7 +1,5 @@
 # Lambda MongoDB Backup 가이드
 
-# test
-
 ## 개요
 
 MongoDB Atlas의 데이터를 TTL 만료 전에 S3로 자동 백업하는 Lambda 함수입니다.
