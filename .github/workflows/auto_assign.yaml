@@ -15,4 +15,4 @@ jobs:
     steps:
       - uses: kentaro-m/auto-assign-action@v2.0.0
         with:
-          configuration-path: '.github/auto_assign.yaml' # 위에서 만든 설정 파일 경로
+          configuration-path: '.github/auto_assign.yaml'
