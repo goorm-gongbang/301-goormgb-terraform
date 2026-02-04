@@ -53,15 +53,24 @@ resource "aws_elasticache_parameter_group" "this" {
   name   = "${var.name}-redis-params"
   family = "redis7"
 
-  # 티켓팅 대기열 최적화
+  # 티켓팅 대기열 최적화: TTL 기반 데이터 삭제 우선
+  # - Queue Service: ZSET 기반 대기열 (Admission Token TTL 30~90초)
+  # - Seat Service: 분산 락 (Hold Token TTL ~5분)
   parameter {
     name  = "maxmemory-policy"
-    value = "volatile-lru"
+    value = "volatile-ttl"
   }
 
+  # 세션 타임아웃
   parameter {
     name  = "timeout"
     value = "300"
+  }
+
+  # 대용량 대기열 처리를 위한 최적화
+  parameter {
+    name  = "tcp-keepalive"
+    value = "60"
   }
 
   tags = var.tags
