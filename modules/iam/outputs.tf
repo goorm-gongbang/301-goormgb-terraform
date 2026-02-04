@@ -5,6 +5,11 @@ output "groups" {
 }
 
 # CI/CD Role ARNs
+output "github_actions_role_arn" {
+  description = "GitHub Actions IAM Role ARN"
+  value       = aws_iam_role.github_actions.arn
+}
+
 output "teamcity_role_arn" {
   description = "TeamCity IAM Role ARN"
   value       = aws_iam_role.teamcity.arn
@@ -13,6 +18,11 @@ output "teamcity_role_arn" {
 output "teamcity_instance_profile_name" {
   description = "TeamCity EC2 Instance Profile name"
   value       = aws_iam_instance_profile.teamcity.name
+}
+
+output "eso_role_arn" {
+  description = "External Secrets Operator IAM Role ARN (IRSA)"
+  value       = length(aws_iam_role.eso) > 0 ? aws_iam_role.eso[0].arn : null
 }
 
 output "argocd_role_arn" {
