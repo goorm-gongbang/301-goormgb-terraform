@@ -69,3 +69,72 @@ resource "aws_secretsmanager_secret_version" "app" {
     jwt_secret = var.jwt_secret
   })
 }
+
+#------------------------------------------------------------------------------
+# Porkbun DDNS credentials
+#------------------------------------------------------------------------------
+resource "aws_secretsmanager_secret" "porkbun_ddns" {
+  count = var.porkbun_api_key != "" ? 1 : 0
+
+  name        = "${var.name}/porkbun-ddns"
+  description = "Porkbun DDNS API credentials"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "porkbun_ddns" {
+  count = var.porkbun_api_key != "" ? 1 : 0
+
+  secret_id = aws_secretsmanager_secret.porkbun_ddns[0].id
+  secret_string = jsonencode({
+    DOMAIN       = var.porkbun_domain
+    SUBDOMAINS   = var.porkbun_subdomains
+    APIKEY       = var.porkbun_api_key
+    SECRETAPIKEY = var.porkbun_secret_key
+  })
+}
+
+#------------------------------------------------------------------------------
+# Google OAuth credentials
+#------------------------------------------------------------------------------
+resource "aws_secretsmanager_secret" "google_oauth" {
+  count = var.google_client_id != "" ? 1 : 0
+
+  name        = "${var.name}/google-oauth"
+  description = "Google OAuth client credentials"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "google_oauth" {
+  count = var.google_client_id != "" ? 1 : 0
+
+  secret_id = aws_secretsmanager_secret.google_oauth[0].id
+  secret_string = jsonencode({
+    client_id     = var.google_client_id
+    client_secret = var.google_client_secret
+  })
+}
+
+#------------------------------------------------------------------------------
+# ArgoCD configuration
+#------------------------------------------------------------------------------
+resource "aws_secretsmanager_secret" "argocd" {
+  count = length(var.argocd_admin_users) > 0 ? 1 : 0
+
+  name        = "${var.name}/argocd"
+  description = "ArgoCD configuration (Google OAuth admin users)"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "argocd" {
+  count = length(var.argocd_admin_users) > 0 ? 1 : 0
+
+  secret_id = aws_secretsmanager_secret.argocd[0].id
+  secret_string = jsonencode({
+    admin_users   = var.argocd_admin_users
+    client_id     = var.google_client_id
+    client_secret = var.google_client_secret
+  })
+}

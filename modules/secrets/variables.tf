@@ -74,3 +74,57 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+#------------------------------------------------------------------------------
+# Porkbun DDNS
+#------------------------------------------------------------------------------
+variable "porkbun_domain" {
+  description = "Porkbun domain"
+  type        = string
+  default     = "goormgb.space"
+}
+
+variable "porkbun_subdomains" {
+  description = "Porkbun subdomains"
+  type        = string
+  default     = "@,*"
+}
+
+variable "porkbun_api_key" {
+  description = "Porkbun API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "porkbun_secret_key" {
+  description = "Porkbun secret API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+#------------------------------------------------------------------------------
+# Google OAuth
+#------------------------------------------------------------------------------
+variable "google_client_id" {
+  description = "Google OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+#------------------------------------------------------------------------------
+# ArgoCD
+#------------------------------------------------------------------------------
+variable "argocd_admin_users" {
+  description = "List of Gmail addresses for ArgoCD admin access"
+  type        = list(string)
+  default     = []
+}
