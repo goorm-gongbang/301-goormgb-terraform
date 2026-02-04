@@ -5,16 +5,16 @@ locals {
     # Frontend
     "goormgb-frontend",
 
-    # 예상 MSA 5개
-    "goormgb-backend-auth",   // 인증 서비스
-    "goormgb-backend-queue",  // 대기열 서비스
-    "goormgb-backend-seat",   // 좌석 서비스
-    "goormgb-backend-order",  // 주문 서비스
-    "goormgb-backend-admin",  // 관리자 서비스
+    # Backend MSA 5개 (포트 순서)
+    "goormgb-backend-auth-guard",    # :8080 - OAuth2/JWT 인증, Bot 탐지, IP 블랙리스트
+    "goormgb-backend-queue",         # :8081 - 대기열 진입, 순번 관리, Admission Token 발급
+    "goormgb-backend-seat",          # :8082 - 좌석맵, 좌석 Hold, Hold Token 발급
+    "goormgb-backend-order-core",    # :8083 - 주문/결제, 티켓 가격, 마이페이지
+    "goormgb-backend-recommendation", # :8084 - 가용 좌석 기반 추천 로직
 
     # AI 서비스
-    "goormgb-ai-control", // AI Control Plane (Service A)
-    "goormgb-ai-test",    // Test Automation (Service B)
+    "goormgb-ai-control", # AI Control Plane (Service A)
+    "goormgb-ai-test",    # Test Automation (Service B)
   ]
 }
 
