@@ -74,15 +74,29 @@ resource "aws_route53_record" "api" {
   }
 }
 
-# A record for dev subdomain
-resource "aws_route53_record" "dev" {
-  count = var.dev_ip != "" ? 1 : 0
+# MiniPC IP를 가르키는 레코드 (Cloudfront가 바라볼 원본)
+resource "aws_route53_record" "origin_dev" {
+  count = var.origin_dev_ip != "" ? 1 : 0
 
   zone_id = local.zone_id
-  name    = "dev.${var.domain_name}"
+  name    = "origin-dev.${var.domain_name}"
   type    = "A"
   ttl     = 300
-  records = [var.dev_ip]
+  records = [var.origin_dev_ip]
+}
+
+# 사용자가 접속할 dev 레코드 (Cloudfront를 가르킴)
+resource "aws_route53_record" "dev" {
+  count = var.dev_cloudfront_domain != "" ? 1 : 0
+  name    = "dev.${var.domain_name}"
+  type    = "A"
+  zone_id = "local.zone_id"
+
+  alias {
+    evaluate_target_health = false
+    name                   = "var.dev_cloudfront_domain"
+    zone_id                = "var.cloudfront_zone_id"
+  }
 }
 
 # CNAME records for monitoring tools

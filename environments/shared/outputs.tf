@@ -14,3 +14,7 @@ output "iam_groups" {
   description = "IAM groups"
   value       = module.iam.groups
 }
+
+output "github_actions_role_arn" {
+  value       = module.oidc.role_arn
+}

@@ -39,3 +39,10 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# Cloudfront가 원본(MiniPC)에 접속할 때 HTTP/HTTPS중 무엇을 쓸지 선택할 수 있게하는 변수
+variable "origin_protocol_policy" {
+  description = "Origin(MiniPC/ALB) 접속 프로토콜 (http-only, https-only 등"
+  type = string
+  default = "https-only"
+}

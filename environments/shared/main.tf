@@ -42,3 +42,27 @@ module "ecr" {
 module "iam" {
   source = "../../modules/iam"
 }
+
+# ... (기존 ECR, IAM 모듈 부분 유지) ...
+
+# [이동됨] Github Actions OIDC
+module "oidc" {
+  source      = "../../modules/oidc"
+  github_repo = "goorm-gongbang/301-goormgb-terraform"
+}
+
+# [이동됨] Terraform State Lock
+resource "aws_dynamodb_table" "terraform_lock" {
+  name         = "terraform-state-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  tags = {
+    Name = "Terraform Lock Table"
+  }
+}

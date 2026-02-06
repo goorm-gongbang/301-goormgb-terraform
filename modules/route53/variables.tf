@@ -35,10 +35,16 @@ variable "alb_zone_id" {
   default     = ""
 }
 
-variable "dev_ip" {
-  description = "Dev environment IP address"
+variable "origin_dev_ip" {
+  description = "MiniPC의 공인 IP (origin-dev 레코드용)"
   type        = string
   default     = ""
+}
+
+variable "dev_cloudfront_domain" {
+  description = "Dev환굥 Cloudfront 도메인 (dev 레코드용)"
+  type = "string"
+  default = ""
 }
 
 variable "monitoring_records" {
