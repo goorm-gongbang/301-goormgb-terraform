@@ -27,7 +27,7 @@ resource "aws_iam_user" "argocd" {
 
 resource "aws_iam_group_membership" "cicd_membership" {
   name = "cicd-membership"
-  group = "aws_iam_group.cicd_bots.name"
+  group = aws_iam_group.cicd_bots.name
   users = [
     aws_iam_user.argocd.name,
     aws_iam_user.teamcity.name,
