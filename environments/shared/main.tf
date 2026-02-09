@@ -1,12 +1,15 @@
-provider "aws" {
-  region = "ap-northeast-2"
+terraform {
+  backend "s3" {
+    bucket         = "goormgb-tf-state-bucket"
+    key            = "shared/terraform.tfstate"
+    region         = "ap-northeast-2"
+    dynamodb_table = "goormgb-tf-lock"
+    encrypt        = true
+  }
 }
 
-module "backend" {
-  source = "../../modules/backend"
-
-  bucket_name         = "goormgb-terraform-state-bucket"
-  dynamodb_table_name = "goormgb-terraform-lock-table"
+provider "aws" {
+  region = "ap-northeast-2"
 }
 
 module "route53" {
