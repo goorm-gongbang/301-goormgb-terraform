@@ -1,4 +1,21 @@
-# CS 그룹 권한
+# -----------------------------------------------
+# Cloud Native (CN)
+# -----------------------------------------------
+
+resource "aws_iam_group" "cn_admin" {
+  name = "CN"
+  path = "/users/"
+}
+
+#CN은 어드민
+resource "aws_iam_group_policy_attachment" "cn_admin_policy" {
+  group      = aws_iam_group.cn_admin.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+# -----------------------------------------------
+# Cyber Security (CS)
+# -----------------------------------------------
 resource "aws_iam_group" "cs_team" {
   name = "CS"
   path = "/users/"
@@ -9,7 +26,9 @@ resource "aws_iam_group_policy_attachment" "cs_audit" {
   policy_arn = "arn:aws:iam::aws:policy/SecurityAudit"
 }
 
-# CICD 관련 리소스
+# -----------------------------------------------
+# CICD 리소스
+# -----------------------------------------------
 resource "aws_iam_group" "cicd_bots" {
   name = "CICD-Bots-Group"
   path = "/system/"
@@ -40,7 +59,9 @@ resource "aws_iam_group_membership" "cicd_membership" {
 #   policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
 # }
 
+# -----------------------------------------------
 # Github Actions OIDC
+# -----------------------------------------------
 data "tls_certificate" "github" {
   url = "https://token.actions.githubusercontent.com"
 }
