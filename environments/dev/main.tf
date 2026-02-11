@@ -21,8 +21,7 @@ locals {
     "order-core",
     "queue",
     "recommendation",
-    "seat",
-    "common-core"
+    "seat"
   ]
 }
 
