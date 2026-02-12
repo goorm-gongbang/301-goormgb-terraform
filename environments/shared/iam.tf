@@ -82,11 +82,10 @@ resource "aws_iam_group_membership" "cicd_membership" {
   ]
 }
 
-# 추후 권한은 아래처럼 추가
-# resource "aws_iam_group_policy_attachment" "cicd_power_user" {
-#   group      = aws_iam_group.cicd_bots.name
-#   policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
-# }
+resource "aws_iam_group_policy_attachment" "cicd_power_user" {
+  group      = aws_iam_group.cicd_bots.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+}
 
 # -----------------------------------------------
 # Github Actions OIDC
