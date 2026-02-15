@@ -1,0 +1,26 @@
+# k3s 환경 시크릿 값 예시
+# 복사해서 terraform.tfvars 로 만든 후 실제 값 입력
+# terraform.tfvars 는 .gitignore에 포함됨
+
+# ArgoCD
+github_ssh_private_key = <<-EOF
+-----BEGIN OPENSSH PRIVATE KEY-----
+your-private-key-here
+-----END OPENSSH PRIVATE KEY-----
+EOF
+
+google_oauth_client_id     = "your-client-id.apps.googleusercontent.com"
+google_oauth_client_secret = "GOCSPX-your-secret"
+
+# Monitoring
+grafana_admin_password = "secure-password-here"
+
+# Database
+db_password = "secure-db-password"
+
+# JWT
+jwt_secret_key = "your-jwt-secret-key-min-32-chars"
+
+# Kakao OAuth
+kakao_client_id     = "your-kakao-client-id"
+kakao_client_secret = "your-kakao-client-secret"
