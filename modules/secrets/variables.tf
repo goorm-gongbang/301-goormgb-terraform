@@ -1,5 +1,5 @@
 variable "environment" {
-  description = "환경 이름 (k3s, eks-dev, eks-prod 등)"
+  description = "환경 이름 (dev, staging, prod)"
   type        = string
 }
 
