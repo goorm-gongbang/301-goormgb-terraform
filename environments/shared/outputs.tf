@@ -15,3 +15,22 @@ output "cicd_user_names" {
     argocd   = aws_iam_user.argocd.name
   }
 }
+
+# =============================================================================
+# S3 Backup
+# =============================================================================
+
+output "backup_bucket_name" {
+  description = "S3 백업 버킷 이름"
+  value       = aws_s3_bucket.backup.id
+}
+
+output "backup_bucket_arn" {
+  description = "S3 백업 버킷 ARN"
+  value       = aws_s3_bucket.backup.arn
+}
+
+output "backup_bucket_name" {
+  description = "S3 백업 버킷 이름"
+  value       = aws_s3_bucket.backup.id
+}

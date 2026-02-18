@@ -127,6 +127,15 @@ module "secrets" {
         redirectUri  = "https://api.goormgb.space/auth/callback/kakao"
       }
     }
+
+    # === Infrastructure ===
+    "infra/s3-backup" = {
+      description = "S3 backup credentials for kubeadm cluster"
+      value = {
+        AWS_ACCESS_KEY_ID     = aws_iam_access_key.kubeadm.id
+        AWS_SECRET_ACCESS_KEY = aws_iam_access_key.kubeadm.secret
+      }
+    }
   }
 
   tags = local.common_tags
