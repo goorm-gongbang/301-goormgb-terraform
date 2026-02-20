@@ -28,7 +28,7 @@ resource "aws_route53_record" "dev_frontend" {
   name    = "dev.goormgb.space"
   type    = "CNAME"
   ttl     = 300
-  records = ["cname.vercel-dns.com"]
+  records = ["3d244415b9bf4a46.vercel-dns-017.com"]
 }
 
 # MiniPC API Gateway (api.dev.goormgb.space)
